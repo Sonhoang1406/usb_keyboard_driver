@@ -1,0 +1,1 @@
+savedcmd_/home/vudung0301/Driver/USBNEW/Module.symvers :=  scripts/mod/modpost -m -a      -o /home/vudung0301/Driver/USBNEW/Module.symvers -T /home/vudung0301/Driver/USBNEW/modules.order -i Module.symvers -e 

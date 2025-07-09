@@ -1,0 +1,1 @@
+savedcmd_/home/vudung0301/Driver/USBNEW/usbkbd.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/vudung0301/Driver/USBNEW/usbkbd.ko /home/vudung0301/Driver/USBNEW/usbkbd.o /home/vudung0301/Driver/USBNEW/usbkbd.mod.o;  make -f ./arch/x86/Makefile.postlink /home/vudung0301/Driver/USBNEW/usbkbd.ko
