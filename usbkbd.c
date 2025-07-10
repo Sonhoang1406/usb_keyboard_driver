@@ -82,7 +82,7 @@ static void usb_kbd_irq(struct urb *urb)
             if (keycode)
                 input_report_key(kbd->dev, keycode, 1);
             else
-                printk(KERN_INFO "usbkbd: Unknown key (scancode %#x) pressed.\n", kbd->new[i]);
+                hid_info(urb->dev, "Unknown key (scancode %#x) pressed.\n", kbd->new[i]);
         }
     }
 
@@ -114,7 +114,7 @@ static int usb_kbd_event(struct input_dev *dev, unsigned int type, unsigned int 
             kbd->newleds = (!!test_bit(LED_KANA, dev->led) << 3) | (!!test_bit(LED_COMPOSE, dev->led) << 3) |
                            (!!test_bit(LED_SCROLLL, dev->led) << 2) | (1 << 1) |
                            (!!test_bit(LED_NUML, dev->led));
-            printk("Now change to MODE 2.\n");
+            printk(KERN_INFO "usbkbd: Now change to MODE 2.\n");
         }
         else
         {
@@ -128,12 +128,10 @@ static int usb_kbd_event(struct input_dev *dev, unsigned int type, unsigned int 
         if ((!!test_bit(LED_NUML, dev->led)) != (*(kbd->leds) & 1))
         {
             kbd->mode = 0;
-            kbd->newleds = (!!test_bit(LED_KANA, dev->led)
-                            << 3) |
-                           (!!test_bit(LED_COMPOSE, dev->led) << 3) |
+            kbd->newleds = (!!test_bit(LED_KANA, dev->led) << 3) | (!!test_bit(LED_COMPOSE, dev->led) << 3) |
                            (!!test_bit(LED_SCROLLL, dev->led) << 2) | (!!test_bit(LED_CAPSL, dev->led) << 1) |
                            (!!test_bit(LED_NUML, dev->led));
-            printk("Now change to MODE 1.\n");
+            printk(KERN_INFO "usbkbd: Now change to MODE 1.\n");
         }
         else
         {
@@ -170,7 +168,7 @@ static void usb_kbd_led(struct urb *urb)
     case -ESHUTDOWN:
         return;
     default: /* error */
-        printk(KERN_WARNING "usbkbd: led urb status %d received\n", urb->status);
+        hid_warn(urb->dev, "led urb status %d received\n", urb->status);
         break;
     }
 
@@ -215,7 +213,7 @@ static int usb_kbd_probe(struct usb_interface *iface, const struct usb_device_id
         return -ENODEV;
 
     pipe = usb_rcvintpipe(dev, endpoint->bEndpointAddress);
-    maxp = usb_maxpacket(dev, pipe, 0);
+    maxp = usb_maxpacket(dev, pipe);
 
     kbd = kzalloc(sizeof(struct usb_kbd), GFP_KERNEL);
     input_dev = input_allocate_device();
@@ -226,9 +224,9 @@ static int usb_kbd_probe(struct usb_interface *iface, const struct usb_device_id
     kbd->dev = input_dev;
     spin_lock_init(&kbd->leds_lock);
 
-    if (!(kbd->new = usb_buffer_alloc(dev, 8, GFP_ATOMIC, &kbd->new_dma)))
+    if (!(kbd->new = usb_alloc_coherent(dev, 8, GFP_ATOMIC, &kbd->new_dma)))
         goto fail1;
-    if (!(kbd->leds = usb_buffer_alloc(dev, 1, GFP_ATOMIC, &kbd->leds_dma)))
+    if (!(kbd->leds = usb_alloc_coherent(dev, 1, GFP_ATOMIC, &kbd->leds_dma)))
         goto fail2;
 
     kbd->irq = usb_alloc_urb(0, GFP_KERNEL);
@@ -329,9 +327,9 @@ fail5:
 fail4:
     usb_free_urb(kbd->irq);
 fail3:
-    usb_buffer_free(dev, 1, kbd->leds, kbd->leds_dma);
+    usb_free_coherent(dev, 1, kbd->leds, kbd->leds_dma);
 fail2:
-    usb_buffer_free(dev, 8, kbd->new, kbd->new_dma);
+    usb_free_coherent(dev, 8, kbd->new, kbd->new_dma);
 fail1:
     input_free_device(input_dev);
     kfree(kbd);
@@ -350,8 +348,8 @@ static void usb_kbd_disconnect(struct usb_interface *intf)
         input_unregister_device(kbd->dev);
         usb_free_urb(kbd->irq);
         usb_free_urb(kbd->led);
-        usb_buffer_free(kbd->usbdev, 8, kbd->new, kbd->new_dma);
-        usb_buffer_free(kbd->usbdev, 1, kbd->leds, kbd->leds_dma);
+        usb_free_coherent(kbd->usbdev, 8, kbd->new, kbd->new_dma);
+        usb_free_coherent(kbd->usbdev, 1, kbd->leds, kbd->leds_dma);
         kfree(kbd->cr);
         kfree(kbd);
     }
